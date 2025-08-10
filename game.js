@@ -48,7 +48,7 @@ let gameState = {
     keys: 0,
     currentRoom: 0,
     gameTime: 0,
-    totalRooms: 33,
+    totalRooms: 1000,
     gameOverTimer: null,
     powerUps: {
         speed: 0,
@@ -115,23 +115,31 @@ const roomThemes = [
     { name: "Cosmic Space", bg: "#000080", accent: "#4B0082", particle: "#E6E6FA" }
 ];
 
-// Generate 33 rooms with diverse themes
+// Generate 1000 rooms with diverse themes and scaling difficulty
 const rooms = [];
-for (let i = 0; i < 33; i++) {
+for (let i = 0; i < 1000; i++) {
     const theme = roomThemes[i % roomThemes.length];
+    
+    // Scale difficulty based on room number
+    const difficultyLevel = Math.floor(i / 100) + 1;
+    const baseEnemies = Math.min(1 + Math.floor(i / 50), 8); // 1-8 enemies max
+    const enemyVariation = Math.floor(Math.random() * 3) - 1; // -1 to +1 variation
+    const finalEnemies = Math.max(1, baseEnemies + enemyVariation);
+    
     const room = {
-        name: `${theme.name} ${Math.floor(i / roomThemes.length) + 1}`,
+        name: `${theme.name} ${Math.floor(i / roomThemes.length) + 1} (Level ${difficultyLevel})`,
         background: theme.bg,
         accent: theme.accent,
         particle: theme.particle,
         passages: [],
-        enemies: Math.floor(Math.random() * 2) + 1, // 1-2 enemies (easier)
+        enemies: finalEnemies,
         keys: 1,
-        theme: theme
+        theme: theme,
+        difficultyLevel: difficultyLevel
     };
     
     // Add passages to connect rooms
-    if (i < 32) {
+    if (i < 999) {
         // Connect to next room
         const passageSide = Math.floor(Math.random() * 4);
         let passage = {};
@@ -153,10 +161,18 @@ for (let i = 0; i < 33; i++) {
         room.passages.push(passage);
     }
     
-    // Add some rooms with multiple passages for exploration
-    if (i % 5 === 0 && i < 30) {
-        const extraPassage = { x: canvas.width/4, y: canvas.height/4, width: 80, height: 80, targetRoom: i + 5, targetX: canvas.width/4, targetY: canvas.height/4 };
+    // Add some rooms with multiple passages for exploration (more variety)
+    if (i % 10 === 0 && i < 990) {
+        const extraPassage = { x: canvas.width/4, y: canvas.height/4, width: 80, height: 80, targetRoom: i + 10, targetX: canvas.width/4, targetY: canvas.height/4 };
         room.passages.push(extraPassage);
+    }
+    
+    // Add boss rooms every 100 levels
+    if (i % 100 === 99) {
+        room.name = `🔥 BOSS ROOM ${Math.floor(i / 100) + 1} 🔥`;
+        room.enemies = Math.min(12, 3 + Math.floor(i / 100) * 2); // More enemies in boss rooms
+        room.background = '#8B0000'; // Dark red for boss rooms
+        room.particle = '#FF0000';
     }
     
     rooms.push(room);
@@ -514,6 +530,7 @@ function updateProjectiles() {
             
             if (distance < enemy.size + proj.size) {
                 enemy.health -= proj.damage;
+                enemy.lastHitTime = gameState.gameTime; // Track when hit
                 createHitEffect(enemy.x, enemy.y, proj.color, enemy.color);
                 projectiles.splice(i, 1);
                 
@@ -521,8 +538,9 @@ function updateProjectiles() {
                     createDeathEffect(enemy.x, enemy.y, enemy.color);
                     enemies.splice(j, 1);
                     
-                    // Chance to drop power-up
-                    if (Math.random() < 0.3) {
+                    // Chance to drop power-up (increases with room number)
+                    const dropChance = 0.3 + (gameState.currentRoom * 0.01);
+                    if (Math.random() < dropChance) {
                         createPowerUp();
                     }
                 }
@@ -586,29 +604,40 @@ function createEnemy() {
             break;
     }
     
-    // Different enemy types with fun colors (no blood)
+    // Different enemy types with fun colors and scaling difficulty
     const enemyTypes = [
         { color: '#4B0082', size: 25, speed: 1.5, health: 40, name: 'Shadow' },
         { color: '#FF4500', size: 20, speed: 2.5, health: 30, name: 'Fire' },
         { color: '#00CED1', size: 28, speed: 1.8, health: 50, name: 'Ice' },
         { color: '#32CD32', size: 22, speed: 2.2, health: 35, name: 'Poison' },
-        { color: '#9932CC', size: 26, speed: 2.0, health: 45, name: 'Magic' }
+        { color: '#9932CC', size: 26, speed: 2.0, health: 45, name: 'Magic' },
+        { color: '#FFD700', size: 30, speed: 1.2, health: 80, name: 'Golden' },
+        { color: '#FF69B4', size: 18, speed: 3.0, health: 25, name: 'Pink' },
+        { color: '#00FF00', size: 32, speed: 1.0, health: 100, name: 'Tank' },
+        { color: '#FF1493', size: 15, speed: 3.5, health: 20, name: 'Speed' },
+        { color: '#8A2BE2', size: 35, speed: 0.8, health: 120, name: 'Boss' }
     ];
     
     const enemyType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+    
+    // Scale difficulty based on room number
+    const difficultyMultiplier = 1 + (gameState.currentRoom * 0.1);
+    const scaledHealth = Math.floor(enemyType.health * difficultyMultiplier);
+    const scaledSpeed = enemyType.speed * (1 + (gameState.currentRoom * 0.05));
     
     enemies.push({
         x: x,
         y: y,
         size: enemyType.size,
-        health: enemyType.health,
-        maxHealth: enemyType.health,
-        speed: enemyType.speed,
+        health: scaledHealth,
+        maxHealth: scaledHealth,
+        speed: scaledSpeed,
         color: enemyType.color,
         name: enemyType.name,
         pulse: 0,
         rotation: 0,
-        trail: []
+        trail: [],
+        lastHitTime: 0 // Track when enemy was last hit to prevent health regen
     });
 }
 
@@ -1127,13 +1156,15 @@ function drawRoomInfo() {
     const room = rooms[gameState.currentRoom];
     
     ctx.fillStyle = 'rgba(0,0,0,0.8)';
-    ctx.fillRect(10, 50, 350, 80);
+    ctx.fillRect(10, 50, 350, 110);
     
     ctx.fillStyle = 'white';
     ctx.font = '22px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`Room: ${room.name}`, 20, 85);
     ctx.fillText(`Progress: ${gameState.currentRoom + 1}/${gameState.totalRooms}`, 20, 115);
+    ctx.fillText(`Level: ${room.difficultyLevel || 1}`, 20, 145);
+    ctx.fillText(`Enemies: ${room.enemies}`, 20, 175);
     
     // Power-up status
     let powerUpText = '';
@@ -1152,7 +1183,7 @@ function drawRoomInfo() {
         }
     });
     if (powerUpText) {
-        ctx.fillText(`Active: ${powerUpText}`, 20, 145);
+        ctx.fillText(`Active: ${powerUpText}`, 20, 205);
     }
 }
 
@@ -1349,7 +1380,7 @@ function restartGame() {
         keys: 0,
         currentRoom: 0,
         gameTime: 0,
-        totalRooms: 33,
+        totalRooms: 1000,
         gameOverTimer: null,
         powerUps: {
             speed: 0,
