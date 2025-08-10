@@ -8,10 +8,12 @@ A massive 33-room adventure game with touch controls for iPad and mobile devices
 
 ## 📱 Features
 
-- **33 massive rooms** to explore
+- **1000 MASSIVE ROOMS** to explore with scaling difficulty!
 - **Touch controls** for iPad and mobile
 - **8 different power-ups** with cool animations
 - **3 different powers** (Ice, Fire, Combined)
+- **10 different enemy types** with unique abilities
+- **Boss rooms** every 100 levels with epic battles
 - **Beautiful particle effects** and animations
 - **Professional menu system** with restart functionality
 
@@ -63,7 +65,7 @@ A massive 33-room adventure game with touch controls for iPad and mobile devices
 
 ## 🎯 Objective
 
-Collect all 33 skeleton keys by exploring rooms and defeating enemies! Each room has unique enemies and power-ups to discover.
+Collect all 1000 skeleton keys by exploring rooms and defeating enemies! Each room has unique enemies and power-ups to discover. The game gets progressively harder with scaling difficulty and boss battles every 100 levels!
 
 ---
 
